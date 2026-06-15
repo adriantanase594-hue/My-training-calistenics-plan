@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Workout Tracker</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0a0a0f; --surface: #13131a; --surface2: #1c1c27;
+    --border: #2a2a3a; --accent: #7c6fff; --accent2: #ff6b6b;
+    --accent3: #4ecdc4; --text: #e8e8f0; --muted: #6b6b80; --done: #4caf7d;
+  }
+  body { background: var(--bg); color: var(--text); font-family: 'Space Grotesk', sans-serif; min-height: 100vh; padding: 24px 16px 60px; }
+  .header { text-align: center; margin-bottom: 40px; }
+  .header-eyebrow { font-family: 'Space Mono', monospace; font-size: 11px; letter-spacing: 3px; color: var(--accent); text-transform: uppercase; margin-bottom: 10px; }
+  .header h1 { font-size: clamp(28px, 6vw, 48px); font-weight: 700; line-height: 1.1; background: linear-gradient(135deg, #fff 0%, var(--accent) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+  .header-sub { color: var(--muted); font-size: 14px; margin-top: 8px; }
+  .date-bar { display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 36px; }
+  .date-pill { background: var(--surface2); border: 1px solid var(--border); border-radius: 100px; padding: 8px 20px; font-family: 'Space Mono', monospace; font-size: 13px; color: var(--text); }
+  .date-pill span { color: var(--accent); font-weight: 700; }
+  .week-strip { display: flex; gap: 8px; justify-content: center; margin-bottom: 40px; flex-wrap: wrap; }
+  .day-chip { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 14px; border-radius: 12px; background: var(--surface); border: 1px solid var(--border); min-width: 56px; cursor: default; transition: all 0.2s; }
+  .day-chip.today { border-color: var(--accent); background: rgba(124, 111, 255, 0.1); }
+  .day-chip.done { border-color: var(--done); background: rgba(76, 175, 125, 0.08); }
+  .day-chip.rest { opacity: 0.5; }
+  .day-chip .chip-label { font-family: 'Space Mono', monospace; font-size: 10px; letter-spacing: 1px; color: var(--muted); text-transform: uppercase; }
+  .day-chip.today .chip-label { color: var(--accent); }
+  .day-chip.done .chip-label { color: var(--done); }
+  .day-chip .chip-icon { font-size: 18px; }
+  .today-card { max-width: 600px; margin: 0 auto 32px; background: var(--surface); border: 1px solid var(--border); border-radius: 20px; overflow: hidden; }
+  .today-header { padding: 24px 28px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+  .today-eyebrow { font-family: 'Space Mono', monospace; font-size: 10px; letter-spacing: 2px; color: var(--muted); text-transform: uppercase; margin-bottom: 6px; }
+  .today-title { font-size: 22px; font-weight: 700; }
+  .today-subtitle { font-size: 13px; color: var(--muted); margin-top: 4px; }
+  .status-badge { flex-shrink: 0; padding: 6px 14px; border-radius: 100px; font-size: 12px; font-weight: 600; font-family: 'Space Mono', monospace; }
+  .status-badge.pending { background: rgba(124, 111, 255, 0.15); color: var(--accent); border: 1px solid rgba(124, 111, 255, 0.3); }
+  .status-badge.done-badge { background: rgba(76, 175, 125, 0.15); color: var(--done); border: 1px solid rgba(76, 175, 125, 0.3); }
+  .exercises-body { padding: 20px 28px; }
+  .ex-section-title { font-family: 'Space Mono', monospace; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); margin-bottom: 12px; margin-top: 20px; }
+  .ex-section-title:first-child { margin-top: 0; }
+  .exercise-item { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
+  .exercise-item:last-child { border-bottom: none; }
+  .ex-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--border); flex-shrink: 0; }
+  .ex-name { font-size: 14px; font-weight: 500; }
+  .ex-detail { font-size: 12px; color: var(--muted); margin-top: 2px; font-family: 'Space Mono', monospace; }
+  .card-footer { padding: 20px 28px 24px; border-top: 1px solid var(--border); }
+  .btn-done { width: 100%; padding: 16px; border-radius: 14px; border: none; cursor: pointer; font-family: 'Space Grotesk', sans-serif; font-size: 15px; font-weight: 700; letter-spacing: 0.5px; transition: all 0.2s; background: var(--accent); color: #fff; }
+  .btn-done:hover { opacity: 0.85; transform: translateY(-1px); }
+  .btn-done:active { transform: translateY(0); }
+  .btn-done.completed { background: rgba(76, 175, 125, 0.15); color: var(--done); border: 1px solid rgba(76, 175, 125, 0.3); cursor: default; }
+  .btn-done.completed:hover { opacity: 1; transform: none; }
+  .rest-card { max-width: 600px; margin: 0 auto 32px; background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 40px 28px; text-align: center; }
+  .rest-emoji { font-size: 48px; margin-bottom: 16px; }
+  .rest-title { font-size: 24px; font-weight: 700; margin-bottom: 8px; }
+  .rest-sub { font-size: 14px; color: var(--muted); line-height: 1.6; }
+  .next-preview { max-width: 600px; margin: 0 auto 32px; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 20px 24px; display: flex; align-items: center; gap: 16px; }
+  .next-icon { font-size: 28px; flex-shrink: 0; }
+  .next-label { font-family: 'Space Mono', monospace; font-size: 10px; letter-spacing: 2px; color: var(--muted); text-transform: uppercase; margin-bottom: 4px; }
+  .next-title { font-size: 16px; font-weight: 600; }
+  .next-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .streak-bar { max-width: 600px; margin: 0 auto 32px; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; }
+  .streak-label { font-size: 13px; color: var(--muted); }
+  .streak-val { font-family: 'Space Mono', monospace; font-size: 20px; font-weight: 700; color: var(--accent2); }
+  .streak-val span { font-size: 13px; color: var(--muted); font-family: 'Space Grotesk', sans-serif; font-weight: 400; }
+  .history-section { max-width: 600px; margin: 0 auto; }
+  .history-title { font-family: 'Space Mono', monospace; font-size: 11px; letter-spacing: 2px; color: var(--muted); text-transform: uppercase; margin-bottom: 16px; text-align: center; }
+  .history-list { display: flex; flex-direction: column; gap: 8px; }
+  .history-item { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 12px 18px; display: flex; align-items: center; justify-content: space-between; }
+  .h-left { display: flex; align-items: center; gap: 10px; }
+  .h-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--done); flex-shrink: 0; }
+  .h-dot.rest-dot { background: var(--muted); }
+  .h-name { font-size: 13px; font-weight: 500; }
+  .h-date { font-family: 'Space Mono', monospace; font-size: 11px; color: var(--muted); }
+  .h-badge { font-size: 11px; padding: 3px 10px; border-radius: 100px; font-family: 'Space Mono', monospace; }
+  .h-badge.done { background: rgba(76,175,125,0.1); color: var(--done); }
+  .h-badge.rest { background: rgba(107,107,128,0.1); color: var(--muted); }
+  .timer-btn { background: rgba(124,111,255,0.15); border: 1px solid rgba(124,111,255,0.3); color: var(--accent); border-radius: 8px; padding: 4px 10px; font-size: 11px; font-family: 'Space Mono', monospace; cursor: pointer; flex-shrink: 0; transition: all 0.2s; }
+  .timer-btn:hover { background: rgba(124,111,255,0.3); }
+  .timer-btn.running { background: rgba(255,107,107,0.15); border-color: rgba(255,107,107,0.4); color: var(--accent2); }
+  .timer-btn.finished { background: rgba(76,175,125,0.15); border-color: rgba(76,175,125,0.4); color: var(--done); }
+  .timer-overlay { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--surface2); border: 1px solid var(--accent); border-radius: 20px; padding: 16px 24px; display: flex; align-items: center; gap: 16px; z-index: 999; box-shadow: 0 8px 32px rgba(0,0,0,0.4); min-width: 260px; justify-content: space-between; }
+  .timer-overlay.hidden { display: none; }
+  .timer-name { font-size: 12px; color: var(--muted); margin-bottom: 2px; }
+  .timer-count { font-family: 'Space Mono', monospace; font-size: 32px; font-weight: 700; color: var(--text); }
+  .timer-count.urgent { color: var(--accent2); }
+  .timer-count.done-color { color: var(--done); }
+  .timer-stop { background: rgba(255,107,107,0.15); border: 1px solid rgba(255,107,107,0.3); color: var(--accent2); border-radius: 10px; padding: 8px 14px; font-size: 13px; cursor: pointer; font-family: 'Space Grotesk', sans-serif; font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="header-eyebrow">Calisthenics Program</div>
+  <h1>My Training Plan</h1>
+  <div class="header-sub" id="headerSub"></div>
+</div>
+<div class="date-bar">
+  <div class="date-pill" id="datePill">—</div>
+</div>
+<div class="week-strip" id="weekStrip"></div>
+<div id="mainContent"></div>
+<div class="history-section" id="historySection" style="display:none">
+  <div class="history-title">History</div>
+  <div class="history-list" id="historyList"></div>
+</div>
+
+<div class="timer-overlay hidden" id="timerOverlay">
+  <div>
+    <div class="timer-name" id="timerName">Timer</div>
+    <div class="timer-count" id="timerCount">00</div>
+  </div>
+  <button class="timer-stop" id="timerStop">✕ Stop</button>
+</div>
+
+<script>
+// ─── TIMER ───────────────────────────────────────────────────────────────────
+let timerInterval = null;
+let timerRemaining = 0;
+
+function parseSeconds(detail) {
+  // Match patterns like "30 sec", "20–30 sec", "3–6 sec", "45 sec"
+  const match = detail.match(/(\d+)(?:–(\d+))?\s*sec/);
+  if (!match) return null;
+  // Use the higher value if range
+  return parseInt(match[2] || match[1]);
+}
+
+function startTimer(seconds, name, btnEl) {
+  if (timerInterval) clearInterval(timerInterval);
+  timerRemaining = seconds;
+  const overlay = document.getElementById('timerOverlay');
+  const countEl = document.getElementById('timerCount');
+  const nameEl = document.getElementById('timerName');
+  overlay.classList.remove('hidden');
+  nameEl.textContent = name;
+
+  // Reset all timer buttons
+  document.querySelectorAll('.timer-btn').forEach(b => { b.classList.remove('running','finished'); b.textContent = b.dataset.label; });
+  if (btnEl) { btnEl.classList.add('running'); btnEl.textContent = '⏸ '+seconds+'s'; }
+
+  function tick() {
+    countEl.className = 'timer-count' + (timerRemaining <= 5 ? ' urgent' : '');
+    countEl.textContent = String(timerRemaining).padStart(2,'0');
+    if (timerRemaining <= 0) {
+      clearInterval(timerInterval);
+      timerInterval = null;
+      countEl.className = 'timer-count done-color';
+      countEl.textContent = '✓';
+      if (btnEl) { btnEl.classList.remove('running'); btnEl.classList.add('finished'); btnEl.textContent = '✓ Done'; }
+      // Vibrate if supported
+      if (navigator.vibrate) navigator.vibrate([200,100,200]);
+      setTimeout(() => { overlay.classList.add('hidden'); }, 2000);
+      return;
+    }
+    timerRemaining--;
+  }
+  tick();
+  timerInterval = setInterval(tick, 1000);
+}
+
+document.getElementById('timerStop').addEventListener('click', () => {
+  if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+  document.getElementById('timerOverlay').classList.add('hidden');
+  document.querySelectorAll('.timer-btn').forEach(b => { b.classList.remove('running','finished'); b.textContent = b.dataset.label; });
+});
+const PLAN = {
+  1: {
+    name: "Muscle-Up Day", emoji: "💪", color: "#7c6fff",
+    sections: [
+      { title: "Warm-Up", titleColor: "#f4a261", exercises: [
+        { name: "Arm circles", detail: "30 sec each direction" },
+        { name: "Band pull-aparts", detail: "2 sets × 15 reps" },
+        { name: "Scapula push-ups", detail: "2 sets × 10 reps" },
+        { name: "Dead hangs", detail: "2 sets × 30 sec" },
+        { name: "Jumping jacks", detail: "30 reps" }
+      ]},
+      { title: "Skill", exercises: [
+        { name: "Band assisted muscle-up", detail: "4 sets × 3–5 reps" },
+        { name: "Jump muscle-up", detail: "3–5 total attempts" }
+      ]},
+      { title: "Strength", exercises: [
+        { name: "Explosive pull-ups", detail: "3 sets × 5–8 reps" },
+        { name: "Straight bar dips", detail: "3 sets × 5–10 reps" },
+        { name: "Active false grip hang", detail: "3 sets × 20–30 sec" },
+        { name: "Hollow body hold", detail: "3 sets × 20–30 sec" }
+      ]},
+      { title: "Cool-Down", titleColor: "#4ecdc4", exercises: [
+        { name: "Chest stretch", detail: "30 sec each side" },
+        { name: "Lat stretch", detail: "30 sec each side" },
+        { name: "Triceps stretch", detail: "30 sec each side" },
+        { name: "Child's pose", detail: "60 sec" }
+      ]}
+    ]
+  },
+  3: {
+    name: "Front Lever Day", emoji: "🏋️", color: "#ff6b6b",
+    sections: [
+      { title: "Warm-Up", titleColor: "#f4a261", exercises: [
+        { name: "Dead hang", detail: "2 sets × 30 sec" },
+        { name: "Scapula pull-ups", detail: "2 sets × 10 reps" },
+        { name: "Band pull-aparts", detail: "2 sets × 15 reps" },
+        { name: "Cat-cow", detail: "10 reps slow" },
+        { name: "Shoulder circles", detail: "30 sec each direction" }
+      ]},
+      { title: "Skill", exercises: [
+        { name: "Band assisted front lever", detail: "3–4 sets × 3–6 sec" },
+        { name: "Tuck front lever", detail: "3–4 sets × 3–6 sec" }
+      ]},
+      { title: "Strength", exercises: [
+        { name: "Tucked front lever rows", detail: "3 sets × 10 reps" },
+        { name: "Tucked front lever raises", detail: "3 sets × 10 reps" },
+        { name: "Australian rows", detail: "3 sets × 8–12 reps" },
+        { name: "Pull-ups", detail: "3 sets × 5–8 reps" },
+        { name: "Hollow rocks", detail: "3 sets × 10–15 reps" }
+      ]},
+      { title: "Cool-Down", titleColor: "#4ecdc4", exercises: [
+        { name: "Lat stretch", detail: "30 sec each side" },
+        { name: "Thoracic rotation", detail: "10 reps each side" },
+        { name: "Child's pose", detail: "60 sec" },
+        { name: "Doorway chest stretch", detail: "30 sec each side" }
+      ]}
+    ]
+  },
+  5: {
+    name: "Handstand Day", emoji: "🤸", color: "#4ecdc4",
+    sections: [
+      { title: "Warm-Up", titleColor: "#f4a261", exercises: [
+        { name: "Wrist circles", detail: "30 sec each direction" },
+        { name: "Wrist stretches", detail: "30 sec each side" },
+        { name: "Shoulder rotations", detail: "2 sets × 10 reps" },
+        { name: "Pike stretch", detail: "30 sec" },
+        { name: "Wall slides", detail: "2 sets × 10 reps" }
+      ]},
+      { title: "Skill", exercises: [
+        { name: "Wall handstand hold", detail: "3 sets × 20–40 sec" },
+        { name: "Freestanding attempts", detail: "5–10 min total" }
+      ]},
+      { title: "Strength", exercises: [
+        { name: "Wall handstand push-up negatives", detail: "3 sets × 3–5 reps" },
+        { name: "Dips / Push-ups", detail: "3 sets × 6–10 reps" },
+        { name: "Archer push-up", detail: "3 sets × 8–12 reps" },
+        { name: "Hollow body hold", detail: "3 sets × 20–30 sec" }
+      ]},
+      { title: "Cool-Down", titleColor: "#4ecdc4", exercises: [
+        { name: "Wrist flexor stretch", detail: "30 sec each side" },
+        { name: "Shoulder cross stretch", detail: "30 sec each side" },
+        { name: "Downward dog", detail: "45 sec" },
+        { name: "Child's pose", detail: "60 sec" }
+      ]}
+    ]
+  }
+};
+
+const DAY_SHORT = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+const DAY_FULL  = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+const MONTHS    = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+function getStorage() { try { return JSON.parse(localStorage.getItem('wt_v1') || '{}'); } catch { return {}; } }
+function setStorage(d) { try { localStorage.setItem('wt_v1', JSON.stringify(d)); } catch {} }
+function dateKey(d) { return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+
+function render() {
+  const now = new Date();
+  const dow = now.getDay();
+  const today = PLAN[dow];
+  const isWorkout = !!today;
+  const key = dateKey(now);
+  const storage = getStorage();
+  const isDone = storage[key] === 'done';
+
+  document.getElementById('datePill').innerHTML = '<span>'+DAY_FULL[dow]+'</span>, '+MONTHS[now.getMonth()]+' '+now.getDate()+', '+now.getFullYear();
+  document.getElementById('headerSub').textContent = isWorkout ? today.name+' today' : 'Rest & Recovery Day 🛌';
+
+  renderWeekStrip(now, storage);
+
+  const main = document.getElementById('mainContent');
+  let html = isWorkout ? renderWorkoutCard(today, isDone) : renderRestCard(dow);
+  html += renderNextPreview(dow);
+  html += renderStreak(storage, now);
+  main.innerHTML = html;
+
+  const btn = document.getElementById('markDoneBtn');
+  if (btn && !isDone) {
+    btn.addEventListener('click', () => {
+      const s = getStorage(); s[key] = 'done'; setStorage(s); render();
+    });
+  }
+
+  // Timer button delegation
+  document.querySelectorAll('.timer-btn').forEach(b => {
+    b.addEventListener('click', () => {
+      const idx = parseInt(b.dataset.idx);
+      const ex = window._timerExercises[idx];
+      if (ex) startTimer(ex.secs, ex.name, b);
+    });
+  });
+  renderHistory(storage);
+}
+
+function renderWeekStrip(now, storage) {
+  const strip = document.getElementById('weekStrip');
+  const monday = new Date(now);
+  monday.setDate(now.getDate() - ((now.getDay() + 6) % 7));
+  let html = '';
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(monday); d.setDate(monday.getDate() + i);
+    const dow = d.getDay(); const key = dateKey(d);
+    const isToday = d.toDateString() === now.toDateString();
+    const done = storage[key] === 'done';
+    const isWorkout = !!PLAN[dow];
+    const past = d < now && !isToday;
+    let cls = 'day-chip' + (isToday?' today':'') + (done?' done':'') + (!isWorkout?' rest':'');
+    let icon = isWorkout ? (done?'✅':(past?'○':PLAN[dow].emoji)) : (done?'✅':'💤');
+    html += '<div class="'+cls+'"><div class="chip-icon">'+icon+'</div><div class="chip-label">'+DAY_SHORT[dow]+'</div></div>';
+  }
+  strip.innerHTML = html;
+}
+
+function renderWorkoutCard(workout, isDone) {
+  let sectionsHtml = '';
+  let timerExercises = [];
+  for (const sec of workout.sections) {
+    sectionsHtml += '<div class="ex-section-title" style="color:'+(sec.titleColor||'var(--accent)')+'">'+sec.title+'</div>';
+    for (const ex of sec.exercises) {
+      const secs = parseSeconds(ex.detail);
+      let timerHtml = '';
+      if (secs) {
+        const idx = timerExercises.length;
+        timerExercises.push({ name: ex.name, secs });
+        timerHtml = '<button class="timer-btn" data-label="⏱ '+secs+'s" data-idx="'+idx+'">⏱ '+secs+'s</button>';
+      }
+      sectionsHtml += '<div class="exercise-item"><div class="ex-dot"></div><div class="ex-text"><div class="ex-name">'+ex.name+'</div><div class="ex-detail">'+ex.detail+'</div></div>'+timerHtml+'</div>';
+    }
+  }
+  const badge = isDone
+    ? '<div class="status-badge done-badge">✓ Completed</div>'
+    : '<div class="status-badge pending">Pending</div>';
+  const btn = isDone
+    ? '<button class="btn-done completed" disabled>✓ Workout completed!</button>'
+    : '<button class="btn-done" id="markDoneBtn">✓ Mark as done today</button>';
+  
+  // Store timer exercises globally
+  window._timerExercises = timerExercises;
+  return '<div class="today-card"><div class="today-header"><div><div class="today-eyebrow">Today</div><div class="today-title">'+workout.emoji+' '+workout.name+'</div><div class="today-subtitle">Calisthenics • Skill + Strength</div></div>'+badge+'</div><div class="exercises-body">'+sectionsHtml+'</div><div class="card-footer">'+btn+'</div></div>';
+}
+
+function renderRestCard(dow) {
+  const msgs = [
+    "Muscles grow during rest. Today you do nothing — and that's part of the training.",
+    "A rest day is just as important as a workout. Relax and recover.",
+    "Recovery = progress. Let your body rebuild and come back stronger."
+  ];
+  return '<div class="rest-card"><div class="rest-emoji">💤</div><div class="rest-title">Rest Day</div><div class="rest-sub">'+msgs[dow%msgs.length]+'</div></div>';
+}
+
+function renderNextPreview(todayDow) {
+  let nextDow = 0, daysAhead = 0;
+  for (let i = 1; i <= 7; i++) { const d = (todayDow+i)%7; if (PLAN[d]) { nextDow=d; daysAhead=i; break; } }
+  const next = PLAN[nextDow];
+  const label = daysAhead===1 ? 'Tomorrow' : 'In '+daysAhead+' days ('+DAY_FULL[nextDow]+')';
+  const count = next.sections.reduce((a,s)=>a+s.exercises.length,0);
+  return '<div class="next-preview"><div class="next-icon">'+next.emoji+'</div><div class="next-text"><div class="next-label">Up next • '+label+'</div><div class="next-title">'+next.name+'</div><div class="next-sub">'+count+' exercises</div></div></div>';
+}
+
+function renderStreak(storage, now) {
+  let count = 0;
+  const check = new Date(now);
+  for (let i = 0; i < 90; i++) {
+    const d = new Date(check); d.setDate(check.getDate()-i);
+    const dow = d.getDay();
+    if (PLAN[dow]) { const k = dateKey(d); if (storage[k]==='done') count++; else if (i>0) break; }
+  }
+  return '<div class="streak-bar"><div class="streak-label">🔥 Sessions completed</div><div class="streak-val">'+count+' <span>workouts</span></div></div>';
+}
+
+function renderHistory(storage) {
+  const keys = Object.keys(storage).sort().reverse().slice(0,10);
+  if (!keys.length) { document.getElementById('historySection').style.display='none'; return; }
+  document.getElementById('historySection').style.display='block';
+  let html = '';
+  for (const key of keys) {
+    const [y,m,d] = key.split('-').map(Number);
+    const date = new Date(y,m-1,d); const dow = date.getDay();
+    const workout = PLAN[dow];
+    const name = workout ? workout.name : 'Rest Day';
+    const emoji = workout ? workout.emoji : '💤';
+    const isDone = storage[key]==='done';
+    html += '<div class="history-item"><div class="h-left"><div class="h-dot'+(workout?'':' rest-dot')+'"></div><div><div class="h-name">'+emoji+' '+name+'</div><div class="h-date">'+DAY_FULL[dow]+', '+MONTHS[m-1]+' '+d+', '+y+'</div></div></div><div class="h-badge '+(isDone?'done':'rest')+'">'+(isDone?'✓ done':'rest')+'</div></div>';
+  }
+  document.getElementById('historyList').innerHTML = html;
+}
+
+render();
+</script>
+</body>
+</html>
